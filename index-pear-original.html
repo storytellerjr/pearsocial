@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PearSocial</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --pear:    #7EC845;
+      --pear-dk: #5aA030;
+      --purple:  #8B5CF6;
+      --bg:      #0A0C0E;
+      --surface: #111418;
+      --border:  #1E2530;
+      --text:    #E8EDF2;
+      --muted:   #5A6474;
+      --red:     #FF4D6A;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Header ── */
+    header {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10,12,14,0.85);
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .logo-pear { color: var(--pear); }
+    .logo-social { color: var(--text); }
+
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: var(--pear);
+      border-radius: 50% 50% 50% 40%;
+      position: relative;
+      transform: rotate(-15deg);
+      flex-shrink: 0;
+    }
+    .logo-icon::after {
+      content: '';
+      position: absolute;
+      top: -8px; left: 14px;
+      width: 3px; height: 10px;
+      background: var(--pear-dk);
+      border-radius: 2px;
+      transform: rotate(20deg);
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.35rem 0.85rem;
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.4s;
+    }
+    .status-dot.live { background: var(--pear); box-shadow: 0 0 6px var(--pear); }
+
+    /* ── Main layout ── */
+    main {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 0;
+      height: calc(100vh - 130px);
+    }
+
+    /* ── Left panel ── */
+    .panel-left {
+      padding: 2rem;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      overflow-y: auto;
+    }
+
+    .section-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* ── Upload zone ── */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      background: rgba(126,200,69,0.02);
+      position: relative;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.drag-over {
+      border-color: var(--pear);
+      background: rgba(126,200,69,0.06);
+    }
+
+    .upload-icon {
+      width: 56px; height: 56px;
+      margin: 0 auto 1rem;
+      background: linear-gradient(135deg, var(--pear), var(--pear-dk));
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+    }
+
+    .upload-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .upload-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+    }
+
+    #file-input { display: none; }
+
+    /* ── Key display ── */
+    .key-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem;
+    }
+
+    .key-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+    }
+
+    .key-value {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.62rem;
+      color: var(--pear);
+      background: rgba(126,200,69,0.08);
+      border: 1px solid rgba(126,200,69,0.2);
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .btn-copy {
+      background: var(--border);
+      border: none;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 0.5rem 0.9rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-copy:hover { background: var(--pear); color: #000; }
+
+    /* ── Video list ── */
+    .video-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .video-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 1rem;
+      transition: border-color 0.2s;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .video-card:hover { border-color: var(--pear); }
+
+    .video-thumb {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, #1a2030, #0f1520);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .video-info { overflow: hidden; }
+
+    .video-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .video-meta {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-top: 0.25rem;
+    }
+
+    .btn-share {
+      background: linear-gradient(135deg, var(--purple), #6D28D9);
+      border: none;
+      color: white;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+    .btn-share:hover { opacity: 0.85; }
+
+    /* ── Right panel — Nostr share ── */
+    .panel-right {
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      overflow-y: auto;
+    }
+
+    .nostr-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .nostr-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .nostr-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--purple), #4F46E5);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+
+    .nostr-title { font-size: 1rem; font-weight: 700; }
+    .nostr-sub   { font-size: 0.75rem; color: var(--muted); }
+
+    .field-group { display: flex; flex-direction: column; gap: 0.4rem; }
+
+    .field-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.62rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .field-input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.65rem 0.9rem;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.72rem;
+      width: 100%;
+      transition: border-color 0.2s;
+      resize: vertical;
+    }
+    .field-input:focus { outline: none; border-color: var(--purple); }
+    .field-input::placeholder { color: var(--muted); }
+
+    .event-preview {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.9rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--pear);
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 200px;
+      overflow-y: auto;
+      line-height: 1.6;
+    }
+
+    .btn-publish {
+      background: linear-gradient(135deg, var(--purple), #4F46E5);
+      border: none;
+      color: white;
+      border-radius: 10px;
+      padding: 0.85rem;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      letter-spacing: 0.02em;
+    }
+    .btn-publish:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(139,92,246,0.35); }
+    .btn-publish:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .relay-list { display: flex; flex-direction: column; gap: 0.4rem; }
+
+    .relay-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem 0.85rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.62rem;
+    }
+
+    .relay-status {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+    .relay-status.ok { background: var(--pear); }
+
+    /* ── Log ── */
+    footer {
+      position: relative;
+      z-index: 10;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      padding: 0.6rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      min-height: 40px;
+    }
+
+    #log-text {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+      flex: 1;
+    }
+
+    .gateway-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--pear);
+      background: rgba(126,200,69,0.1);
+      border: 1px solid rgba(126,200,69,0.2);
+      border-radius: 6px;
+      padding: 0.2rem 0.6rem;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .gateway-badge:hover {
+      background: rgba(126,200,69,0.15);
+    }
+
+    .dev-tools {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 0.5rem;
+      z-index: 1000;
+    }
+
+    .dev-btn {
+      background: rgba(0,0,0,0.7);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.65rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Space Mono', monospace;
+    }
+    
+    .dev-btn:hover {
+      background: var(--surface);
+      border-color: var(--pear);
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--surface);
+      border: 1px solid var(--pear);
+      border-radius: 10px;
+      padding: 0.85rem 1.25rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--pear);
+      z-index: 999;
+      animation: toastIn 0.3s ease;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .empty-state {
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-align: center;
+      padding: 2rem;
+      font-family: 'Space Mono', monospace;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Dev Tools (only show in Pear dev mode) ── -->
+<div class="dev-tools" id="dev-tools" style="display: none;">
+  <button class="dev-btn" onclick="openDevTools()">🔧 DevTools</button>
+  <button class="dev-btn" onclick="reloadApp()">🔄 Reload</button>
+</div>
+
+<!-- ── Header ── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon"></div>
+    <span class="logo-pear">Pear</span><span class="logo-social">Social</span>
+  </div>
+  <div class="status-pill">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">Connecting...</span>
+  </div>
+</header>
+
+<!-- ── Main ── -->
+<main>
+
+  <!-- Left: Upload + Videos -->
+  <div class="panel-left">
+
+    <div>
+      <div class="section-label">Upload Video</div>
+      <div style="margin-top:0.75rem">
+        <div class="upload-zone" id="upload-zone">
+          <input type="file" id="file-input" accept="video/*">
+          <div class="upload-icon">📹</div>
+          <div class="upload-title">Drop video or click to browse</div>
+          <div class="upload-sub">MP4, MOV, WebM · Stored in Hyperdrive</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drive Key -->
+    <div class="key-card">
+      <div class="section-label">Your Drive Key (pear://)</div>
+      <div class="key-row">
+        <div class="key-value" id="pear-key-display" title="Click to copy">Initializing...</div>
+        <button class="btn-copy" id="copy-key-btn">Copy</button>
+      </div>
+    </div>
+
+    <!-- Video List -->
+    <div>
+      <div class="section-label" style="margin-bottom:0.75rem">Uploaded Videos</div>
+      <div class="video-list" id="video-list">
+        <div class="empty-state" id="empty-state">No videos yet — upload one above ↑</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right: Nostr Share -->
+  <div class="panel-right">
+
+    <div class="section-label">Share on Nostr</div>
+
+    <div class="nostr-card">
+      <div class="nostr-header">
+        <div class="nostr-icon">⚡</div>
+        <div>
+          <div class="nostr-title">Publish to Nostr</div>
+          <div class="nostr-sub">NIP-94 File Metadata Event</div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Selected Video</div>
+        <select class="field-input" id="video-select">
+          <option value="">— Upload a video first —</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Caption</div>
+        <textarea class="field-input" id="caption-input" rows="3"
+          placeholder="What's this video about?"></textarea>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Your nsec (private key)</div>
+        <input class="field-input" type="password" id="nsec-input"
+          placeholder="nsec1... (stays local, never sent)">
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Event Preview (NIP-94)</div>
+        <div class="event-preview" id="event-preview">Select a video to preview the Nostr event...</div>
+      </div>
+
+      <button class="btn-publish" id="publish-btn" disabled>⚡ Publish to Nostr Relays</button>
+    </div>
+
+    <!-- Relays -->
+    <div>
+      <div class="section-label" style="margin-bottom:0.75rem">Nostr Relays</div>
+      <div class="relay-list" id="relay-list">
+        <div class="relay-item">
+          <span>wss://relay.damus.io</span>
+          <div class="relay-status" data-relay="wss://relay.damus.io"></div>
+        </div>
+        <div class="relay-item">
+          <span>wss://nos.lol</span>
+          <div class="relay-status" data-relay="wss://nos.lol"></div>
+        </div>
+        <div class="relay-item">
+          <span>wss://relay.nostr.band</span>
+          <div class="relay-status" data-relay="wss://relay.nostr.band"></div>
+        </div>
+        <div class="relay-item">
+          <span>wss://nostr.wine</span>
+          <div class="relay-status" data-relay="wss://nostr.wine"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ── Footer log ── -->
+<footer>
+  <span id="log-text">Booting PearSocial...</span>
+  <div class="gateway-badge" id="gateway-badge" onclick="openGateway()">Gateway: Checking...</div>
+</footer>
+
+<script type="module">
+  // ── State ──────────────────────────────────────────────────────────────
+  let pearKey = null
+  const videos = []
+  let gatewayOnline = false
+
+  // ── Pear IPC Bridge ────────────────────────────────────────────────────
+  const { ipc } = globalThis.Pear || {}
+
+  // ── DOM refs ───────────────────────────────────────────────────────────
+  const statusDot     = document.getElementById('status-dot')
+  const statusText    = document.getElementById('status-text')
+  const pearKeyDisp   = document.getElementById('pear-key-display')
+  const copyKeyBtn    = document.getElementById('copy-key-btn')
+  const uploadZone    = document.getElementById('upload-zone')
+  const fileInput     = document.getElementById('file-input')
+  const videoList     = document.getElementById('video-list')
+  const emptyState    = document.getElementById('empty-state')
+  const videoSelect   = document.getElementById('video-select')
+  const captionInput  = document.getElementById('caption-input')
+  const nsecInput     = document.getElementById('nsec-input')
+  const eventPreview  = document.getElementById('event-preview')
+  const publishBtn    = document.getElementById('publish-btn')
+  const logText       = document.getElementById('log-text')
+
+  // ── Message handler from Pear backend ──────────────────────────────────
+  if (ipc) {
+    // Real Pear environment
+    ipc.on('to-ui', ({ type, ...data }) => {
+      handleBackendMessage({ type, ...data })
+    })
+    
+    // Request initial data
+    setTimeout(() => {
+      ipc.send('get-drive-key')
+      ipc.send('get-videos')
+    }, 100)
+  } else {
+    // Fallback for browser testing
+    log('⚠️ Running in browser mode - some features unavailable')
+    simulatePearEnvironment()
+  }
+
+  function handleBackendMessage(data) {
+    if (!data?.type) return
+    
+    switch (data.type) {
+      case 'ready':
+        pearKey = data.pearKey
+        statusDot.classList.add('live')
+        statusText.textContent = `Live · ${pearKey.slice(0,8)}...`
+        pearKeyDisp.textContent = `pear://${pearKey}`
+        pearKeyDisp.title = `Click to copy: pear://${pearKey}`
+        log(`✅ Drive ready`)
+        break
+
+      case 'uploaded':
+        addVideoToUI(data.video)
+        showToast(`✅ ${data.video.fileName} uploaded!`)
+        break
+
+      case 'videos-list':
+        data.videos.forEach(video => addVideoToUI(video))
+        break
+
+      case 'drive-key':
+        if (data.pearKey && !pearKey) {
+          pearKey = data.pearKey
+          pearKeyDisp.textContent = `pear://${pearKey}`
+          statusDot.classList.add('live')
+          statusText.textContent = `Live · ${pearKey.slice(0,8)}...`
+        }
+        break
+
+      case 'gateway-status':
+        gatewayOnline = data.online
+        updateGatewayStatus(data)
+        break
+
+      case 'log':
+        log(data.message || data.msg || JSON.stringify(data))
+        break
+
+      case 'error':
+        log(`❌ ${data.message}`)
+        showToast(`❌ Error: ${data.message}`)
+        break
+    }
+  }
+
+  // ── Upload zone ────────────────────────────────────────────────────────
+  uploadZone.addEventListener('click', () => fileInput.click())
+
+  uploadZone.addEventListener('dragover', e => {
+    e.preventDefault()
+    uploadZone.classList.add('drag-over')
+  })
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'))
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault()
+    uploadZone.classList.remove('drag-over')
+    const file = e.dataTransfer.files[0]
+    if (file) processFile(file)
+  })
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) processFile(fileInput.files[0])
+  })
+
+  function processFile (file) {
+    if (!pearKey) {
+      showToast('⏳ Drive not ready yet, please wait...')
+      return
+    }
+    
+    if (!file.type.startsWith('video/')) {
+      showToast('❌ Please select a video file')
+      return
+    }
+
+    log(`📁 Processing: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`)
+
+    if (ipc) {
+      // Real Pear environment - send file path to backend
+      ipc.send('upload-video', { 
+        filePath: file.path, 
+        fileName: file.name 
+      })
+    } else {
+      // Browser fallback - simulate upload
+      const simulatedEntry = {
+        fileName: file.name,
+        drivePath: `/videos/${file.name}`,
+        pearURL: `pear://${pearKey}/videos/${file.name}`,
+        gatewayURL: `http://localhost:7777/video/${pearKey}/${file.name}`,
+        size: file.size,
+        uploadedAt: new Date().toISOString(),
+        objectURL: URL.createObjectURL(file)
+      }
+      
+      setTimeout(() => {
+        addVideoToUI(simulatedEntry)
+        log(`✅ ${file.name} uploaded (simulated)`)
+        showToast(`✅ ${file.name} uploaded!`)
+      }, 1000)
+    }
+  }
+
+  // ── Video list UI ──────────────────────────────────────────────────────
+  function addVideoToUI (video) {
+    videos.push(video)
+    if (emptyState) emptyState.remove()
+
+    // Card
+    const card = document.createElement('div')
+    card.className = 'video-card'
+    card.innerHTML = `
+      <div class="video-thumb">🎬</div>
+      <div class="video-info">
+        <div class="video-name">${video.fileName}</div>
+        <div class="video-meta">${(video.size/1024/1024).toFixed(2)} MB · ${new Date(video.uploadedAt).toLocaleTimeString()}</div>
+        <div class="video-meta" style="color:var(--pear);margin-top:2px">${video.pearURL.slice(0,50)}...</div>
+      </div>
+      <button class="btn-share" data-name="${video.fileName}">Share ⚡</button>
+    `
+    card.querySelector('.btn-share').addEventListener('click', () => selectVideoForShare(video))
+    videoList.appendChild(card)
+
+    // Dropdown
+    const opt = document.createElement('option')
+    opt.value = video.fileName
+    opt.textContent = video.fileName
+    videoSelect.appendChild(opt)
+  }
+
+  // ── Nostr share panel ──────────────────────────────────────────────────
+  videoSelect.addEventListener('change', () => {
+    const v = videos.find(v => v.fileName === videoSelect.value)
+    if (v) updateEventPreview(v)
+  })
+
+  captionInput.addEventListener('input', () => {
+    const v = videos.find(v => v.fileName === videoSelect.value)
+    if (v) updateEventPreview(v)
+  })
+
+  function selectVideoForShare (video) {
+    videoSelect.value = video.fileName
+    updateEventPreview(video)
+    document.querySelector('.panel-right').scrollIntoView({ behavior: 'smooth' })
+  }
+
+  function updateEventPreview (video) {
+    const caption = captionInput.value || 'Video shared via PearSocial 🍐'
+    const event = {
+      kind: 1063,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [
+        ['url',     video.gatewayURL],
+        ['pear',    video.pearURL],
+        ['m',       'video/mp4'],
+        ['size',    String(video.size)],
+        ['t',       'pearsocial'],
+        ['t',       'bitcoin'],
+        ['t',       'p2p']
+      ],
+      content: caption
+    }
+    eventPreview.textContent = JSON.stringify(event, null, 2)
+    publishBtn.disabled = false
+  }
+
+  // ── Publish (simulation — real impl needs nostr-tools + WebSocket) ─────
+  publishBtn.addEventListener('click', async () => {
+    const v = videos.find(v => v.fileName === videoSelect.value)
+    if (!v) return
+
+    publishBtn.disabled = true
+    publishBtn.textContent = '⏳ Publishing...'
+    log('📡 Connecting to Nostr relays...')
+
+    // Simulate relay publishing
+    const relays = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.nostr.band', 'wss://nostr.wine']
+    for (const relay of relays) {
+      await delay(400)
+      const dot = document.querySelector(`[data-relay="${relay}"]`)
+      if (dot) dot.classList.add('ok')
+      log(`✅ Published to ${relay}`)
+    }
+
+    publishBtn.textContent = '✅ Published!'
+    showToast('⚡ Video published to Nostr!')
+    log(`⚡ NIP-94 event broadcast complete for ${v.fileName}`)
+
+    setTimeout(() => {
+      publishBtn.disabled = false
+      publishBtn.textContent = '⚡ Publish to Nostr Relays'
+    }, 3000)
+  })
+
+  // ── Copy key ───────────────────────────────────────────────────────────
+  copyKeyBtn.addEventListener('click', async () => {
+    if (pearKey) {
+      try {
+        await navigator.clipboard.writeText(`pear://${pearKey}`)
+        showToast('📋 Drive key copied!')
+      } catch (err) {
+        // Fallback for environments without clipboard API
+        pearKeyDisp.select()
+        showToast('📋 Drive key selected - press Ctrl+C to copy')
+      }
+    }
+  })
+
+  pearKeyDisp.addEventListener('click', () => copyKeyBtn.click())
+
+  // ── Gateway status updater ─────────────────────────────────────────────
+  function updateGatewayStatus(data) {
+    const badge = document.querySelector('.gateway-badge')
+    if (data.online) {
+      badge.textContent = `Gateway: Online (${data.data?.drives || 0} drives)`
+      badge.style.color = 'var(--pear)'
+      badge.style.borderColor = 'rgba(126,200,69,0.2)'
+    } else {
+      badge.textContent = 'Gateway: Offline'
+      badge.style.color = 'var(--red)'
+      badge.style.borderColor = 'rgba(255,77,106,0.2)'
+    }
+  }
+
+  // ── Utils ──────────────────────────────────────────────────────────────
+  function log (msg) { 
+    logText.textContent = msg
+    console.log(`[PearSocial] ${msg}`)
+  }
+
+  function showToast (msg, isError = false) {
+    const t = document.createElement('div')
+    t.className = 'toast'
+    t.textContent = msg
+    if (isError) {
+      t.style.borderColor = 'var(--red)'
+      t.style.color = 'var(--red)'
+    }
+    document.body.appendChild(t)
+    setTimeout(() => t.remove(), 3000)
+  }
+
+  function delay (ms) { return new Promise(r => setTimeout(r, ms)) }
+
+  // ── Browser fallback simulation ───────────────────────────────────────
+  function simulatePearEnvironment() {
+    setTimeout(() => {
+      const fakeKey = Array.from({length:64}, () => '0123456789abcdef'[Math.floor(Math.random()*16)]).join('')
+      handleBackendMessage({ type: 'ready', pearKey: fakeKey })
+      handleBackendMessage({ type: 'gateway-status', online: false, error: 'Not in Pear environment' })
+    }, 1500)
+  }
+
+  // ── Dev tools functions ────────────────────────────────────────────────
+  function openDevTools() {
+    if (globalThis.Pear?.devtools) {
+      Pear.devtools.open()
+    } else {
+      console.log('DevTools not available')
+    }
+  }
+
+  function reloadApp() {
+    if (globalThis.Pear?.reload) {
+      Pear.reload()
+    } else {
+      location.reload()
+    }
+  }
+
+  function openGateway() {
+    if (gatewayOnline) {
+      if (globalThis.Pear?.shell) {
+        Pear.shell.open('http://localhost:7777/health')
+      } else {
+        window.open('http://localhost:7777/health', '_blank')
+      }
+    } else {
+      showToast('⚠️ Gateway is offline - start with: npm run gateway')
+    }
+  }
+
+  // ── Window and Pear-specific setup ─────────────────────────────────────
+  if (globalThis.Pear) {
+    // Show dev tools in development mode
+    if (Pear.config.dev) {
+      document.getElementById('dev-tools').style.display = 'flex'
+    }
+    
+    // Handle window close
+    window.addEventListener('beforeunload', () => {
+      if (ipc) {
+        ipc.send('window-closing')
+      }
+    })
+    
+    // Handle app updates
+    if (Pear.updates) {
+      Pear.updates.on('available', () => {
+        showToast('🔄 Update available! Restart to apply.')
+      })
+    }
+    
+    // Handle file associations (if someone opens a pear:// link)
+    if (Pear.argv && Pear.argv.length > 1) {
+      const potentialPearURL = Pear.argv[1]
+      if (potentialPearURL.startsWith('pear://')) {
+        log(`🔗 Opened with Pear URL: ${potentialPearURL}`)
+        // TODO: Handle viewing remote pear drives
+      }
+    }
+    
+    log('🍐 Running in Pear desktop environment')
+  } else {
+    log('🌐 Running in browser environment')
+  }
+
+  // ── Initialize app ─────────────────────────────────────────────────────
+  log('🥾 Starting PearSocial...')
+</script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Basic Click Test</title>
+  <style>
+    body { 
+      background: #1a1a1a; 
+      color: white; 
+      font-family: system-ui; 
+      padding: 2rem; 
+    }
+    .test-area {
+      background: red;
+      padding: 2rem;
+      margin: 1rem 0;
+      cursor: pointer;
+      border: 2px solid yellow;
+    }
+    #output {
+      background: #333;
+      padding: 1rem;
+      margin: 1rem 0;
+      min-height: 200px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Basic Click Test</h1>
+  
+  <div id="output">Script loading...</div>
+  
+  <div class="test-area" onclick="testClick()" id="test-area">
+    CLICK ME - Red Box with Yellow Border
+  </div>
+
+  <button onclick="testClick()">Alternative Button Test</button>
+
+  <script>
+    console.log('🚀 Script started loading...')
+    
+    const output = document.getElementById('output')
+    
+    function addOutput(msg) {
+      console.log(msg)
+      output.innerHTML += '<br>' + msg
+    }
+    
+    addOutput('✅ Script loaded successfully')
+    addOutput('🔍 DOM ready state: ' + document.readyState)
+    
+    function testClick() {
+      addOutput('🖱️ CLICK DETECTED!')
+      alert('Click works!')
+    }
+    
+    // Also try with addEventListener
+    const testArea = document.getElementById('test-area')
+    if (testArea) {
+      addOutput('✅ Found test area element')
+      testArea.addEventListener('click', function() {
+        addOutput('🖱️ addEventListener click detected!')
+      })
+    } else {
+      addOutput('❌ Could not find test area element')
+    }
+    
+    addOutput('📋 Setup complete - try clicking!')
+  </script>
+</body>
+</html>

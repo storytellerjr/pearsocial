@@ -1,0 +1,39 @@
+{
+  "name": "pear-social",
+  "version": "1.0.0",
+  "description": "P2P video sharing via Hyperdrive + Nostr - Electron + Pear Runtime",
+  "author": "Storyteller",
+  "main": "electron/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "electron": "electron .",
+    "electron-dev": "NODE_ENV=development electron .",
+    "gateway": "node gateway.js",
+    "start": "npm run electron",
+    "dev": "npm run electron-dev",
+    "pear-legacy": "pear run --dev ."
+  },
+  "dependencies": {
+    "b4a": "^1.6.3",
+    "corestore": "^6.12.1",
+    "express": "^4.18.2",
+    "hyperdrive": "^11.4.1",
+    "hyperswarm": "^4.7.6",
+    "pear-runtime": "^0.4.3"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "@electron-forge/cli": "^7.11.1",
+    "@electron-forge/maker-zip": "^7.11.1",
+    "@electron-forge/maker-dmg": "^7.11.1"
+  },
+  "pear": {
+    "name": "pear-social",
+    "type": "desktop",
+    "gui": {
+      "backgroundColor": "#0A0C0E",
+      "height": 780,
+      "width": 1200
+    }
+  }
+}
