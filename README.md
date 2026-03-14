@@ -1,9 +1,26 @@
 # 🍐 PearSocial
 
+> **Decentralized video sharing that works TODAY**
 
-**Created by**: Storyteller
+**Created by**: Storyteller  
+**Architecture**: Modern **Electron + Pear Runtime** desktop application with P2P networking  
+**Status**: 🟢 **WORKING** - Real video streaming to Primal tested & functional!
 
-**Architecture**: Modern **Electron + Pear Runtime** desktop application with P2P networking
+## 🚀 **What Works Right Now**:
+
+✅ **Upload real videos** via command line  
+✅ **Stream to Primal** Nostr client (tested with 28MB MOV file)  
+✅ **P2P storage** in Hyperdrive with Hyperswarm discovery  
+✅ **HTTP gateway** bridges P2P to web with range requests  
+✅ **Multiple videos** supported (each gets own drive/URL)  
+✅ **All video formats** - MP4, MOV, WebM, MKV, AVI  
+
+**Quick Demo**:
+```bash
+npm run gateway                           # Start bridge server
+node add-video.js ~/Downloads/video.mp4   # Upload your video
+# Share the URL in Primal → Video streams from P2P! 🎬
+```
 
 ---
 
@@ -12,15 +29,17 @@
 ### ✅ **Working Components**:
 - **🖥️ Electron Desktop App**: Beautiful native window with proper GUI
 - **🍐 Pear Runtime**: P2P functionality running in Bare worker  
-- **🌐 HTTP Gateway**: Bridge between P2P and web (`localhost:7777`)
-- **📡 Hyperswarm Networking**: P2P discovery and replication
-- **💾 Hyperdrive Storage**: Distributed video file storage
-- **🎨 Beautiful UI**: Dark theme interface with modern design
+- **🌐 HTTP Gateway**: Fully functional P2P-to-HTTP bridge (`localhost:7777`)
+- **📡 Hyperswarm Networking**: P2P discovery and replication working
+- **💾 Hyperdrive Storage**: Video storage and streaming operational
+- **🎨 Beautiful UI**: Dark theme interface restored and functional
+- **🎬 Video Streaming**: Real video playback in browsers and Nostr clients
+- **📱 Primal Integration**: Tested and working with Primal Nostr client
 
 ### ⚠️ **Known Issue**:
-- **Click Events**: Currently debugging Electron context isolation issue
-- **Upload**: Temporarily non-functional while fixing event handlers
-- **Status**: See `issues.md` for detailed debugging information
+- **macOS File Upload**: File dialog issue on macOS 26+ (see `issues.md`)
+- **Workaround Available**: Use command-line video upload scripts
+- **Status**: Seeking community solutions for macOS compatibility
 
 ---
 
@@ -80,19 +99,25 @@ npm install
 # Terminal 1: Start HTTP Gateway
 npm run gateway
 
-# Terminal 2: Start Desktop App
+# Terminal 2: Start Desktop App  
 npm run dev
 
 # ✅ Result: Desktop window + P2P backend + HTTP bridge
 ```
 
-### **Option 2: Desktop App Only**
+### **Option 2: Gateway Only (For Testing)**
+```bash
+npm run gateway
+# ✅ Result: HTTP bridge server for video streaming
+```
+
+### **Option 3: Desktop App Only**
 ```bash
 npm run dev
 # ✅ Result: Desktop app with P2P (no web compatibility)
 ```
 
-### **Option 3: Production Mode**
+### **Option 4: Production Mode**
 ```bash
 npm start
 # ✅ Result: Optimized build without DevTools
@@ -107,91 +132,179 @@ npm start
 | `npm run dev` | Launch Electron app in development mode |
 | `npm run gateway` | Start HTTP bridge server |
 | `npm start` | Run production Electron app |
+| `node add-video.js <path>` | Upload video to new Hyperdrive |
+| `node create-test-video.js <path>` | Create test video with discovery |
+| `node check-drive.js [key]` | Debug drive contents |
 | `npm run pear-legacy` | Legacy Pear desktop mode (not recommended) |
 
 ---
 
 ## 🎮 How It Works
 
-### **1. Video Upload Flow**:
-```
-[User drags video into app]
-        ↓
-[Electron shows native file picker]
-        ↓
-[Pear worker stores in Hyperdrive]
-        ↓
-[Video replicated via Hyperswarm P2P]
-        ↓
-[pear://key/videos/filename available]
+### **1. Video Upload Flow (Command Line)**:
+```bash
+# Upload any video file to new Hyperdrive
+node add-video.js ~/Downloads/myvideo.mp4
+
+# ✅ Creates new drive, uploads video, starts P2P discovery
+# ✅ Returns gateway URL for sharing
 ```
 
-### **2. HTTP Gateway Bridge**:
+### **2. Video Streaming Flow**:
 ```
-[P2P pear://key/videos/file.mp4]
+[Video stored in Hyperdrive P2P]
         ↓
-[Gateway bridges to HTTP]
+[Gateway bridges pear:// to HTTP]
         ↓
 [http://localhost:7777/video/key/file.mp4]
         ↓
-[Compatible with Nostr clients]
+[Compatible with Primal, browsers, any Nostr client]
 ```
 
-### **3. Network Architecture**:
+### **3. Nostr Integration**:
+```
+[Share gateway URL in Primal note]
+        ↓
+[Primal fetches video via HTTP]
+        ↓
+[Video streams from P2P network]
+        ↓
+[Decentralized video in centralized client!]
+```
+
+### **4. Network Architecture**:
 - **Desktop App**: User interface and file management
+- **Upload Scripts**: Command-line video upload (macOS workaround)
 - **Pear Worker**: P2P storage and networking (Bare runtime)
-- **HTTP Gateway**: Web compatibility bridge
+- **HTTP Gateway**: Web compatibility bridge with streaming support
 - **Hyperswarm**: Peer discovery and connection
-- **Hyperdrive**: Distributed file storage
+- **Hyperdrive**: Distributed file storage with range request support
 
 ---
 
 ## 🌐 Gateway Endpoints
 
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /health` | Gateway status check |
-| `GET /info/:driveKey` | Drive metadata and file list |
-| `GET /video/:driveKey/:fileName` | Stream video file |
+| Endpoint | Purpose | Features |
+|----------|---------|----------|
+| `GET /` | API documentation | Lists all endpoints |
+| `GET /health` | Gateway status check | Shows uptime, drive count |
+| `GET /info/:driveKey` | Drive metadata and file list | JSON file listing |
+| `GET /video/:driveKey/:fileName` | Stream video file | Range requests, proper MIME types |
 
-**Example**:
+**Example Usage**:
 ```bash
 # Check gateway status
 curl http://localhost:7777/health
 
 # List videos in drive
-curl http://localhost:7777/info/abc123...
+curl http://localhost:7777/info/ceb0fd509...
 
-# Stream video
-curl http://localhost:7777/video/abc123.../video.mp4
+# Stream video (supports range requests for seeking)
+curl -H "Range: bytes=0-1024" http://localhost:7777/video/ceb0fd509.../video.mp4
+```
+
+**Working Example**:
+```bash
+# Real working video URL (28MB sunset MOV file)
+http://localhost:7777/video/ceb0fd509a129638981484f42f3a4a01a950bcf2249d1a3e84e771ae7e46e636/tests-sunset.mov
 ```
 
 ---
 
+## 🎬 Video Upload & Sharing
+
+### **Quick Start - Upload Your First Video**:
+
+**1. Start the Gateway**:
+```bash
+npm run gateway
+# Keep this running
+```
+
+**2. Upload a Video**:
+```bash
+# Upload any video file (MP4, MOV, WebM, etc.)
+node add-video.js ~/Downloads/yourvideo.mp4
+
+# ✅ Output includes gateway URL for sharing
+```
+
+**3. Share in Primal**:
+```text
+Check out this P2P video! 🎬
+
+http://localhost:7777/video/[DRIVE_KEY]/yourvideo.mp4
+```
+
+### **Supported Video Formats**:
+- **MP4** - Best browser compatibility
+- **MOV** - Converted to MP4 MIME type for streaming  
+- **WebM** - Chrome/Firefox optimized
+- **MKV** - High quality containers
+- **AVI** - Legacy format support
+
+### **Upload Multiple Videos**:
+```bash
+# Each video gets its own Hyperdrive and URL
+node add-video.js ~/Movies/video1.mp4
+node add-video.js ~/Movies/video2.mov  
+node add-video.js ~/Movies/video3.webm
+
+# All work simultaneously with the gateway
+```
+
+### **Video Upload Features**:
+- ✅ **Real file streaming** - Not just test content
+- ✅ **Range request support** - Video seeking/scrubbing works
+- ✅ **CORS enabled** - Works with web Nostr clients
+- ✅ **Multiple formats** - Auto MIME type detection
+- ✅ **P2P discovery** - Automatic peer discovery
+- ✅ **No conflicts** - Multiple videos, separate drives
+- ✅ **Instant sharing** - URLs ready immediately
+
+---
+
 ## 🔗 Integration Examples
+
+### **Tested Nostr Clients**:
+- ✅ **Primal** (primal.net) - Full video streaming support
+- ✅ **Web browsers** - Direct video playback  
+- 🔄 **Others** - Should work with any HTTP-compatible client
 
 ### **Nostr Event (NIP-94)**:
 ```json
 {
   "kind": 1063,
   "tags": [
-    ["url", "http://localhost:7777/video/driveKey/video.mp4"],
-    ["pear", "pear://driveKey/videos/video.mp4"],
+    ["url", "http://localhost:7777/video/ceb0fd509.../tests-sunset.mov"],
+    ["pear", "pear://ceb0fd509.../videos/tests-sunset.mov"],
     ["m", "video/mp4"],
-    ["size", "15728640"],
+    ["size", "29793563"],
     ["t", "pearsocial"],
-    ["t", "p2p"]
+    ["t", "p2p"],
+    ["t", "hyperdrive"]
   ],
-  "content": "Check out this P2P video!"
+  "content": "Sunset video streaming from P2P network! 🌅"
 }
 ```
 
 ### **Direct Browser Access**:
 ```html
 <!-- Any web browser can access via gateway -->
-<video controls>
-  <source src="http://localhost:7777/video/driveKey/video.mp4" type="video/mp4">
+<video controls width="100%">
+  <source src="http://localhost:7777/video/ceb0fd509.../tests-sunset.mov" type="video/mp4">
+  Your browser doesn't support video streaming.
 </video>
+```
+
+### **Real Working Example** (Primal-tested):
+```text
+🎬 P2P Video Demo
+
+28MB sunset footage streaming from Hyperdrive:
+http://localhost:7777/video/ceb0fd509a129638981484f42f3a4a01a950bcf2249d1a3e84e771ae7e46e636/tests-sunset.mov
+
+#pearsocial #p2p #hyperdrive
 ```
 
 ---
@@ -224,24 +337,35 @@ proxy_pass http://localhost:7777;
 
 ### **Common Issues**:
 
-**1. Click Events Not Working**:
-- **Status**: Known issue with Electron context isolation
+**1. macOS File Upload Issue**:
+- **Status**: Dialog opens but can't select files on macOS 26+
+- **Workaround**: Use `node add-video.js <path>` command
 - **Solution**: Under investigation (see `issues.md`)
-- **Workaround**: Use DevTools console to test functions
 
 **2. Port 7777 Already in Use**:
 ```bash
 lsof -i :7777        # Find process using port
 kill <PID>           # Kill conflicting process
+npm run gateway      # Restart gateway
 ```
 
-**3. Pear Worker Not Starting**:
-- Check terminal output for Pear Runtime errors
-- Verify dependencies installed correctly
+**3. Video Downloads Instead of Streaming**:
+- **Solution**: Gateway now sends proper `Content-Disposition: inline` headers
+- **Fixed**: Videos stream inline in browsers and Nostr clients
 
-**4. Gateway Not Accessible**:
-- Confirm gateway is running on localhost:7777
-- Check firewall settings for port 7777
+**4. Gateway Not Finding Videos**:
+```bash
+# Check what's in your drive
+node check-drive.js [driveKey]
+
+# Ensure gateway is running
+curl http://localhost:7777/health
+```
+
+**5. P2P Discovery Issues**:
+- Keep upload script running for discovery
+- Each video needs its own discovery process
+- Gateway handles multiple drives automatically
 
 ### **Debug Resources**:
 - `issues.md` - Detailed issue tracking
@@ -254,29 +378,33 @@ kill <PID>           # Kill conflicting process
 ## 🎯 Roadmap
 
 ### **Immediate (Current Sprint)**:
-- [ ] **Fix click event handling** in Electron context
-- [ ] **Restore beautiful UI** after debugging
-- [ ] **Complete upload workflow** end-to-end testing
-- [ ] **Drag & drop support** for file uploads
+- [x] **Video streaming working** ✅ Completed - Primal tested
+- [x] **HTTP gateway functional** ✅ Range requests, MIME types
+- [x] **Real video upload** ✅ Command-line scripts working
+- [ ] **Fix macOS file dialog** for UI uploads
+- [ ] **Drag & drop support** in Electron app
 
 ### **Short Term**:
+- [x] **Multiple video support** ✅ Each gets own drive/URL
 - [ ] **File type validation** and conversion
-- [ ] **Video thumbnails** and preview
+- [ ] **Video thumbnails** and preview generation
 - [ ] **Progress indicators** for uploads
-- [ ] **Real Nostr integration** (NIP-94 publishing)
+- [ ] **Automatic Nostr publishing** (NIP-94)
 
 ### **Medium Term**:
-- [ ] **Multi-drive support** (organize videos)
-- [ ] **Peer management** UI (view connections)
-- [ ] **Gateway management** (remote gateways)
-- [ ] **Update mechanism** (Pear app updates)
+- [ ] **Multi-drive management** UI (organize videos)
+- [ ] **Peer management** interface (view connections)
+- [ ] **Remote gateway support** (deploy on VPS)
+- [ ] **Video discovery** (browse P2P videos)
+- [ ] **Search functionality** (find videos by tags)
 
 ### **Future Vision**:
 - [ ] **AES encryption** for private content
 - [ ] **Lightning payments** (NIP-57 zaps)
-- [ ] **Live streaming** support (HLS)
+- [ ] **Live streaming** support (HLS over P2P)
 - [ ] **Mobile companion** app
-- [ ] **Keet integration** for identity
+- [ ] **Keet integration** for identity/contacts
+- [ ] **IPFS bridge** for wider compatibility
 
 ---
 
