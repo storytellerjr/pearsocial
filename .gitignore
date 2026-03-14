@@ -18,5 +18,10 @@ Icon?
 .Spotlight-V100
 .Trashes
 
-# Optional: ignore test videos and other big folders
+# P2P storage directories (contains video files and core data)
+.gateway-store/
 .test-videos-store/
+.test-store/
+.temp-store-*/
+
+# Optional: ignore test videos and other big folders

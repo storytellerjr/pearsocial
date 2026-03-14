@@ -7,48 +7,64 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const store = new Corestore(path.join(__dirname, '.test-store'))
+const testStore = new Corestore(path.join(__dirname, '.test-videos-store'))
+const gatewayStore = new Corestore(path.join(__dirname, '.gateway-store'))
 
 async function checkDrive() {
-  const driveKey = '25ddb4c88b8383fad8766fd617e5ef9306adebbe311b6357f34119caa3c411c6'
+  const driveKey = process.argv[2] || '3fe1415391a20670cc96e3a73a4c528680ae3a9e8ddf5b4bd2720cad6b58a731'
   console.log('Checking drive:', driveKey)
   
-  // Open the existing drive
   const keyBuf = Buffer.from(driveKey, 'hex')
-  const drive = new Hyperdrive(store, keyBuf)
-  await drive.ready()
   
-  console.log('\n📂 Listing all files in drive:')
-  for await (const entry of drive.list()) {
-    console.log(`  ${entry.key} (${entry.value.blob?.byteLength || 0} bytes)`)
-  }
-  
-  console.log('\n📹 Listing files in /videos folder:')
-  try {
-    for await (const entry of drive.list('/videos')) {
-      console.log(`  ${entry.key} (${entry.value.blob?.byteLength || 0} bytes)`)
-    }
-  } catch (err) {
-    console.log('  Error listing /videos:', err.message)
-  }
-  
-  console.log('\n🔍 Checking specific files:')
-  const testFiles = ['/videos/sample1.mp4', '/videos/sample2.webm', '/videos/test-video.mov']
-  
-  for (const filePath of testFiles) {
+  // Check both stores
+  for (const [storeName, store] of [['test-videos-store', testStore], ['gateway-store', gatewayStore]]) {
+    console.log(`\n🏪 Checking ${storeName}:`)
+    
     try {
-      const entry = await drive.entry(filePath)
-      if (entry) {
-        console.log(`  ✅ ${filePath} exists (${entry.value.blob?.byteLength || 0} bytes)`)
-      } else {
-        console.log(`  ❌ ${filePath} not found`)
+      const drive = new Hyperdrive(store, keyBuf)
+      await drive.ready()
+      
+      console.log('📂 All files:')
+      let fileCount = 0
+      for await (const entry of drive.list()) {
+        console.log(`  ${entry.key} (${entry.value.blob?.byteLength || 0} bytes)`)
+        fileCount++
       }
+      
+      if (fileCount === 0) {
+        console.log('  (no files found)')
+      }
+      
+      console.log('📹 Files in /videos:')
+      let videoCount = 0
+      try {
+        for await (const entry of drive.list('/videos')) {
+          console.log(`  ${entry.key} (${entry.value.blob?.byteLength || 0} bytes)`)
+          videoCount++
+        }
+        if (videoCount === 0) {
+          console.log('  (no video files found)')
+        }
+      } catch (err) {
+        console.log(`  Error: ${err.message}`)
+      }
+      
+      // Check for our specific file
+      try {
+        const entry = await drive.entry('/videos/tests-sunset.mov')
+        if (entry) {
+          console.log(`  ✅ tests-sunset.mov exists! (${entry.value.blob?.byteLength || 0} bytes)`)
+        } else {
+          console.log(`  ❌ tests-sunset.mov not found`)
+        }
+      } catch (err) {
+        console.log(`  ❌ tests-sunset.mov error: ${err.message}`)
+      }
+      
     } catch (err) {
-      console.log(`  ❌ ${filePath} error: ${err.message}`)
+      console.log(`  Error opening drive in ${storeName}: ${err.message}`)
     }
   }
-  
-  await drive.close()
 }
 
 checkDrive().catch(console.error)

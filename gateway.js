@@ -25,18 +25,21 @@ import fs from 'fs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = process.env.PORT || 7777
-const STORE_PATH = path.join(__dirname, '.gateway-store')
+const GATEWAY_STORE_PATH = path.join(__dirname, '.gateway-store')
+const TEST_STORE_PATH = path.join(__dirname, '.test-videos-store')
 
 // ── Setup ──────────────────────────────────────────────────────────────────
 const app = express()
-const store = new Corestore(STORE_PATH)
+const gatewayStore = new Corestore(GATEWAY_STORE_PATH)
+const testStore = new Corestore(TEST_STORE_PATH)
 const swarm = new Hyperswarm()
 const driveCache = new Map()
 
 // Replicate all opened cores on connection
 swarm.on('connection', conn => {
   console.log('[swarm] peer connected')
-  store.replicate(conn)
+  gatewayStore.replicate(conn)
+  testStore.replicate(conn)
 })
 
 // ── CORS — allow Nostr clients to fetch ───────────────────────────────────
@@ -118,12 +121,14 @@ app.get('/video/:driveKey/:fileName', async (req, res) => {
     const ext = path.extname(fileName).toLowerCase()
     const mimeTypes = {
       '.mp4':  'video/mp4',
-      '.mov':  'video/quicktime',
+      '.mov':  'video/mp4',  // Use mp4 MIME type for better browser support
       '.webm': 'video/webm',
       '.mkv':  'video/x-matroska',
       '.avi':  'video/x-msvideo'
     }
     const contentType = mimeTypes[ext] || 'video/mp4'
+    
+    console.log(`[gateway] serving ${fileName} as ${contentType}`)
 
     // ── Range request support (required for video seeking) ──────────────
     const rangeHeader = req.headers.range
@@ -138,7 +143,9 @@ app.get('/video/:driveKey/:fileName', async (req, res) => {
         'Content-Range':  `bytes ${start}-${end}/${totalSize}`,
         'Accept-Ranges':  'bytes',
         'Content-Length': chunkSize,
-        'Content-Type':   contentType
+        'Content-Type':   contentType,
+        'Content-Disposition': 'inline',
+        'Cache-Control': 'no-cache'
       })
 
       const stream = drive.createReadStream(filePath, { start, end })
@@ -152,7 +159,9 @@ app.get('/video/:driveKey/:fileName', async (req, res) => {
       res.writeHead(200, {
         'Content-Length': totalSize,
         'Content-Type':   contentType,
-        'Accept-Ranges':  'bytes'
+        'Accept-Ranges':  'bytes',
+        'Content-Disposition': 'inline',
+        'Cache-Control': 'no-cache'
       })
       const stream = drive.createReadStream(filePath)
       stream.pipe(res)
@@ -177,8 +186,29 @@ async function getOrOpenDrive (driveKeyHex) {
   console.log(`[gateway] opening drive: ${driveKeyHex.slice(0,16)}...`)
 
   const keyBuf = b4a.from(driveKeyHex, 'hex')
-  const drive  = new Hyperdrive(store, keyBuf)
+  
+  // Try gateway store first, then test store
+  let drive = new Hyperdrive(gatewayStore, keyBuf)
   await drive.ready()
+  
+  // Check if drive has content, if not try test store
+  try {
+    const files = []
+    for await (const entry of drive.list('/videos', { limit: 1 })) {
+      files.push(entry)
+      break
+    }
+    
+    if (files.length === 0) {
+      console.log(`[gateway] no files in gateway store, trying test store...`)
+      drive = new Hyperdrive(testStore, keyBuf)
+      await drive.ready()
+    }
+  } catch (err) {
+    console.log(`[gateway] trying test store due to error: ${err.message}`)
+    drive = new Hyperdrive(testStore, keyBuf)
+    await drive.ready()
+  }
 
   // Join swarm to find peers with this drive
   swarm.join(drive.discoveryKey, { client: true, server: false })
