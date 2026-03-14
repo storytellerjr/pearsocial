@@ -48,6 +48,25 @@ app.use((req, res, next) => {
   next()
 })
 
+// ── Root ───────────────────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.json({
+    name: 'PearSocial Gateway Server',
+    version: '1.0.0',
+    description: 'Bridges pear:// Hyperdrive content to https:// HTTP',
+    endpoints: {
+      health: '/health',
+      video: '/video/:driveKey/:fileName',
+      driveInfo: '/info/:driveKey'
+    },
+    examples: {
+      health: `${req.protocol}://${req.get('host')}/health`,
+      video: `${req.protocol}://${req.get('host')}/video/DRIVE_KEY_HERE/video.mp4`,
+      driveInfo: `${req.protocol}://${req.get('host')}/info/DRIVE_KEY_HERE`
+    }
+  })
+})
+
 // ── Health ─────────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({

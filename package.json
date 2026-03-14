@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "P2P video sharing via Hyperdrive + Nostr - Electron + Pear Runtime",
   "author": "Storyteller",
-  "main": "electron/main.js",
-  "type": "commonjs",
+  "main": "electron/main.cjs",
+  "type": "module",
   "scripts": {
     "electron": "electron .",
     "electron-dev": "NODE_ENV=development electron .",
