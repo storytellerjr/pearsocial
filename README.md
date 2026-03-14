@@ -1,6 +1,5 @@
 # 🍐 PearSocial
 
-> **P2P Desktop Video Sharing** — Store videos in **Hyperdrive**, bridge to **HTTP**, compatible with **Nostr clients**
 
 **Created by**: Storyteller
 
