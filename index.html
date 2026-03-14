@@ -1,100 +1,582 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>ElectronAPI Test</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PearSocial</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    body { background: #1a1a1a; color: white; font-family: system-ui; padding: 2rem; }
-    .test-btn { background: #7EC845; color: black; padding: 1rem 2rem; margin: 1rem; cursor: pointer; border-radius: 8px; }
-    #output { background: #333; padding: 1rem; margin: 1rem 0; font-family: monospace; font-size: 0.9rem; }
-    .error { color: #ff6b6b; }
-    .success { color: #51cf66; }
-    .info { color: #74c0fc; }
+    :root {
+      --pear:    #7EC845;
+      --pear-dk: #5aA030;
+      --purple:  #8B5CF6;
+      --bg:      #0A0C0E;
+      --surface: #111418;
+      --border:  #1E2530;
+      --text:    #E8EDF2;
+      --muted:   #5A6474;
+      --red:     #FF4D6A;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10,12,14,0.95);
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .logo-pear { color: var(--pear); }
+    .logo-social { color: var(--text); }
+
+    .logo-icon {
+      width: 32px; height: 32px;
+      background: var(--pear);
+      border-radius: 50% 50% 50% 40%;
+      position: relative;
+      transform: rotate(-15deg);
+      flex-shrink: 0;
+    }
+    .logo-icon::after {
+      content: '';
+      position: absolute;
+      top: -8px; left: 14px;
+      width: 3px; height: 10px;
+      background: var(--pear-dk);
+      border-radius: 2px;
+      transform: rotate(20deg);
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.35rem 0.85rem;
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.4s;
+    }
+    .status-dot.live { background: var(--pear); box-shadow: 0 0 6px var(--pear); }
+
+    /* ── Main layout ── */
+    main {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 0;
+      height: calc(100vh - 130px);
+    }
+
+    .panel-left {
+      padding: 2rem;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      overflow-y: auto;
+    }
+
+    .section-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      background: rgba(126,200,69,0.02);
+    }
+
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--pear);
+      background: rgba(126,200,69,0.06);
+    }
+
+    .upload-icon {
+      width: 56px; height: 56px;
+      margin: 0 auto 1rem;
+      background: linear-gradient(135deg, var(--pear), var(--pear-dk));
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+    }
+
+    .upload-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.4rem; }
+    .upload-sub { font-size: 0.8rem; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+    .key-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem;
+    }
+
+    .key-row { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.75rem; }
+
+    .key-value {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.62rem;
+      color: var(--pear);
+      background: rgba(126,200,69,0.08);
+      border: 1px solid rgba(126,200,69,0.2);
+      border-radius: 8px;
+      padding: 0.5rem 0.75rem;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .btn-copy {
+      background: var(--border);
+      border: none;
+      color: var(--text);
+      border-radius: 8px;
+      padding: 0.5rem 0.9rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-copy:hover { background: var(--pear); color: #000; }
+
+    .video-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+    .video-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 1rem;
+      transition: border-color 0.2s;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .video-card:hover { border-color: var(--pear); }
+
+    .video-thumb {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, #1a2030, #0f1520);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .video-info { overflow: hidden; }
+
+    .video-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .video-meta {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-top: 0.25rem;
+    }
+
+    .btn-share {
+      background: linear-gradient(135deg, var(--purple), #6D28D9);
+      border: none;
+      color: white;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-family: 'Syne', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-share:hover { opacity: 0.85; }
+
+    .panel-right {
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      overflow-y: auto;
+    }
+
+    .empty-state {
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-align: center;
+      padding: 2rem;
+      font-family: 'Space Mono', monospace;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      padding: 0.6rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      min-height: 40px;
+    }
+
+    #log-text {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+      flex: 1;
+    }
+
+    .gateway-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--pear);
+      background: rgba(126,200,69,0.1);
+      border: 1px solid rgba(126,200,69,0.2);
+      border-radius: 6px;
+      padding: 0.2rem 0.6rem;
+      cursor: pointer;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--surface);
+      border: 1px solid var(--pear);
+      border-radius: 10px;
+      padding: 0.85rem 1.25rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--pear);
+      z-index: 999;
+      animation: toastIn 0.3s ease;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
-  <h1>🔍 ElectronAPI Debug Test</h1>
-  
-  <div id="output">Checking electronAPI...</div>
-  
-  <div class="test-btn" onclick="testElectronAPI()">Test ElectronAPI</div>
-  <div class="test-btn" onclick="testFileDialog()">Test File Dialog</div>
 
-  <script>
-    const output = document.getElementById('output')
+<header>
+  <div class="logo">
+    <div class="logo-icon"></div>
+    <span class="logo-pear">Pear</span><span class="logo-social">Social</span>
+  </div>
+  <div class="status-pill">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">Starting...</span>
+  </div>
+</header>
+
+<main>
+  <div class="panel-left">
+    <div>
+      <div class="section-label">Upload Video</div>
+      <div style="margin-top:0.75rem">
+        <div class="upload-zone" id="upload-zone">
+          <div class="upload-icon">📹</div>
+          <div class="upload-title">Click to browse for video</div>
+          <div class="upload-sub">MP4, MOV, WebM · Stored in Hyperdrive</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="key-card">
+      <div class="section-label">Your Drive Key (pear://)</div>
+      <div class="key-row">
+        <div class="key-value" id="pear-key-display" title="Click to copy">Initializing...</div>
+        <button class="btn-copy" id="copy-key-btn">Copy</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label" style="margin-bottom:0.75rem">Uploaded Videos</div>
+      <div class="video-list" id="video-list">
+        <div class="empty-state" id="empty-state">No videos yet — upload one above ↑</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-right">
+    <div class="section-label">Electron + Pear Runtime</div>
     
-    function log(msg, type = 'info') {
-      console.log(msg)
-      const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'
-      output.innerHTML += `<div class="${className}">${new Date().toLocaleTimeString()}: ${msg}</div>`
-      output.scrollTop = output.scrollHeight
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem;">
+      <h3 style="margin-bottom: 1rem; color: var(--pear);">🎉 Desktop App Active!</h3>
+      <p style="font-size: 0.85rem; line-height: 1.6; margin-bottom: 1rem;">
+        Your PearSocial desktop app is now running with:
+      </p>
+      <ul style="font-size: 0.8rem; line-height: 1.8; color: var(--muted); margin-left: 1.5rem;">
+        <li>✅ Electron desktop framework</li>
+        <li>✅ Pear Runtime for P2P functionality</li>
+        <li>✅ Hyperdrive for video storage</li>
+        <li>✅ Hyperswarm for networking</li>
+        <li>✅ HTTP Gateway bridge</li>
+      </ul>
+      <p style="font-size: 0.75rem; margin-top: 1rem; color: var(--muted);">
+        Click "Upload Video" to test P2P sharing!
+      </p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span id="log-text">🍐 PearSocial Desktop App</span>
+  <div class="gateway-badge" id="gateway-badge">Gateway: Checking...</div>
+</footer>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────
+  let pearKey = null
+  const videos = []
+  let gatewayOnline = false
+
+  // ── Electron API Integration ──────────────────────────────────────────
+  const electronAPI = globalThis.electronAPI
+  const isElectron = electronAPI?.isElectron || false
+
+  // ── DOM refs ───────────────────────────────────────────────────────────
+  const statusDot = document.getElementById('status-dot')
+  const statusText = document.getElementById('status-text')
+  const pearKeyDisp = document.getElementById('pear-key-display')
+  const copyKeyBtn = document.getElementById('copy-key-btn')
+  const uploadZone = document.getElementById('upload-zone')
+  const videoList = document.getElementById('video-list')
+  const emptyState = document.getElementById('empty-state')
+  const logText = document.getElementById('log-text')
+  const gatewayBadge = document.getElementById('gateway-badge')
+
+  // ── Message handler from Pear backend ─────────────────────────────────
+  if (isElectron && electronAPI) {
+    log('🖥️  Running in Electron environment')
+    
+    electronAPI.onPearMessage((data) => {
+      handleBackendMessage(data)
+    })
+
+    // Request initial data
+    setTimeout(() => {
+      electronAPI.getDriveKey()
+      electronAPI.getVideos()
+    }, 1000)
+  } else {
+    log('⚠️ Not running in Electron - limited functionality')
+    statusText.textContent = 'Electron not detected'
+  }
+
+  function handleBackendMessage(data) {
+    console.log('📨 Backend message:', data)
+    
+    switch (data.type) {
+      case 'ready':
+        pearKey = data.pearKey
+        statusDot.classList.add('live')
+        statusText.textContent = `Live · ${pearKey.slice(0,8)}...`
+        pearKeyDisp.textContent = `pear://${pearKey}`
+        pearKeyDisp.title = `Click to copy: pear://${pearKey}`
+        log(`✅ P2P Drive ready`)
+        break
+
+      case 'uploaded':
+        addVideoToUI(data.video)
+        showToast(`✅ ${data.video.fileName} uploaded!`)
+        break
+
+      case 'videos-list':
+        data.videos.forEach(video => addVideoToUI(video))
+        break
+
+      case 'gateway-status':
+        gatewayOnline = data.online
+        updateGatewayStatus(data)
+        break
+
+      case 'peer-connected':
+        log(`🤝 Peers connected: ${data.count}`)
+        break
+
+      case 'log':
+        log(data.message)
+        break
+
+      case 'error':
+        log(`❌ ${data.message}`)
+        showToast(`❌ ${data.message}`)
+        break
     }
+  }
+
+  // ── File upload via dialog ─────────────────────────────────────────────
+  async function openFileDialog() {
+    console.log('🔍 openFileDialog called')
+    console.log('pearKey:', pearKey)
+    console.log('isElectron:', isElectron)
+    console.log('electronAPI:', !!electronAPI)
     
-    // Initial checks
-    log('🚀 Starting electronAPI tests...', 'info')
-    log('typeof window: ' + typeof window, 'info')
-    log('typeof globalThis: ' + typeof globalThis, 'info')
-    
-    // Check for electronAPI
-    const electronAPI = globalThis.electronAPI
-    log('globalThis.electronAPI: ' + typeof electronAPI, electronAPI ? 'success' : 'error')
-    
-    if (electronAPI) {
-      log('electronAPI keys: ' + Object.keys(electronAPI).join(', '), 'success')
-    } else {
-      log('electronAPI is not available!', 'error')
-      log('Available globals: ' + Object.keys(globalThis).filter(k => !k.startsWith('webkit')).slice(0, 10).join(', '), 'info')
+    if (!pearKey) {
+      showToast('⏳ Drive not ready yet, please wait...')
+      return
     }
-    
-    // Check for Pear object
-    const Pear = globalThis.Pear
-    log('globalThis.Pear: ' + typeof Pear, Pear ? 'success' : 'error')
-    
-    function testElectronAPI() {
-      log('🧪 Testing electronAPI...', 'info')
-      
-      if (!electronAPI) {
-        log('❌ electronAPI not available', 'error')
-        return
-      }
-      
-      log('✅ electronAPI is available', 'success')
-      
-      // Test each method
-      const methods = ['uploadVideo', 'showOpenDialog', 'getDriveKey', 'getVideos', 'onPearMessage', 'openExternal']
-      
-      methods.forEach(method => {
-        if (electronAPI[method]) {
-          log(`✅ ${method}: available (${typeof electronAPI[method]})`, 'success')
-        } else {
-          log(`❌ ${method}: missing`, 'error')
-        }
-      })
-    }
-    
-    async function testFileDialog() {
-      log('📂 Testing file dialog...', 'info')
-      
-      if (!electronAPI) {
-        log('❌ electronAPI not available', 'error')
-        return
-      }
-      
-      if (!electronAPI.showOpenDialog) {
-        log('❌ showOpenDialog method missing', 'error')
-        return
-      }
+
+    if (isElectron && electronAPI) {
+      log('📂 Opening file dialog...')
+      console.log('📂 About to call electronAPI.showOpenDialog()')
       
       try {
-        log('📂 Calling showOpenDialog...', 'info')
         const result = await electronAPI.showOpenDialog()
-        log('✅ Dialog result: ' + JSON.stringify(result, null, 2), 'success')
+        console.log('📂 File dialog result:', result)
+        
+        if (result && result.success && result.filePath) {
+          log(`📁 Selected: ${result.fileName}`)
+          showToast(`✅ Selected: ${result.fileName}`)
+          
+          // Start upload
+          log(`📤 Uploading ${result.fileName}...`)
+          await electronAPI.uploadVideo(result.filePath, result.fileName)
+          
+        } else {
+          log('📁 No file selected or dialog cancelled')
+          console.log('📁 Dialog was cancelled or no file selected')
+        }
       } catch (err) {
-        log('❌ Dialog error: ' + err.message, 'error')
-        log('   Stack: ' + err.stack, 'error')
+        console.error('File dialog error:', err)
+        showToast('❌ Error opening file dialog: ' + err.message)
+      }
+    } else {
+      console.log('❌ Not in Electron or electronAPI not available')
+      showToast('❌ File upload only available in Electron app')
+    }
+  }
+
+  // ── Upload zone click handler ──────────────────────────────────────────
+  uploadZone.addEventListener('click', openFileDialog)
+
+  // ── UI helpers ─────────────────────────────────────────────────────────
+  function addVideoToUI(video) {
+    videos.push(video)
+    if (emptyState) emptyState.remove()
+
+    const card = document.createElement('div')
+    card.className = 'video-card'
+    card.innerHTML = `
+      <div class="video-thumb">🎬</div>
+      <div class="video-info">
+        <div class="video-name">${video.fileName}</div>
+        <div class="video-meta">${(video.size/1024/1024).toFixed(2)} MB · ${new Date(video.uploadedAt).toLocaleTimeString()}</div>
+        <div class="video-meta" style="color:var(--pear);margin-top:2px">${video.pearURL.slice(0,50)}...</div>
+      </div>
+      <button class="btn-share" data-name="${video.fileName}">View ⚡</button>
+    `
+    
+    card.querySelector('.btn-share').addEventListener('click', () => {
+      if (electronAPI) {
+        electronAPI.openExternal(video.gatewayURL)
+      } else {
+        window.open(video.gatewayURL, '_blank')
+      }
+    })
+    
+    videoList.appendChild(card)
+    log(`📹 Added ${video.fileName} to UI`)
+  }
+
+  function updateGatewayStatus(data) {
+    if (data.online) {
+      gatewayBadge.textContent = `Gateway: Online (${data.data?.drives || 0} drives)`
+      gatewayBadge.style.color = 'var(--pear)'
+    } else {
+      gatewayBadge.textContent = 'Gateway: Offline'
+      gatewayBadge.style.color = 'var(--red)'
+    }
+  }
+
+  // ── Copy key ───────────────────────────────────────────────────────────
+  copyKeyBtn.addEventListener('click', async () => {
+    if (pearKey) {
+      try {
+        await navigator.clipboard.writeText(`pear://${pearKey}`)
+        showToast('📋 Drive key copied!')
+      } catch (err) {
+        showToast('📋 Drive key selected - press Ctrl+C')
       }
     }
-    
-    log('✅ Test page loaded successfully', 'success')
-  </script>
+  })
+
+  pearKeyDisp.addEventListener('click', () => copyKeyBtn.click())
+
+  // ── Utils ──────────────────────────────────────────────────────────────
+  function log(msg) {
+    logText.textContent = msg
+    console.log(`[PearSocial] ${msg}`)
+  }
+
+  function showToast(msg) {
+    const t = document.createElement('div')
+    t.className = 'toast'
+    t.textContent = msg
+    document.body.appendChild(t)
+    setTimeout(() => t.remove(), 3000)
+  }
+
+  // ── Initialize ─────────────────────────────────────────────────────────
+  log('🥾 Starting PearSocial Desktop App...')
+</script>
 </body>
 </html>

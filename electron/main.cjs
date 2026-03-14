@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron')
 const path = require('path')
+const os = require('os')
 const PearRuntime = require('pear-runtime')
 
 // ── Pear Runtime Setup ─────────────────────────────────────────────────────
@@ -107,29 +108,33 @@ function startPearBackend() {
 ipcMain.handle('show-open-dialog', async () => {
   console.log('📂 Opening file dialog...')
   
-  const result = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openFile'],
-    filters: [
-      {
-        name: 'Videos',
-        extensions: ['mp4', 'mov', 'webm', 'avi', 'mkv']
-      },
-      {
-        name: 'All Files',
-        extensions: ['*']
-      }
-    ]
-  })
-  
-  if (!result.canceled && result.filePaths.length > 0) {
-    const filePath = result.filePaths[0]
-    const fileName = path.basename(filePath)
-    console.log(`📁 File selected: ${fileName}`)
-    return { filePath, fileName, success: true }
+  try {
+    // First try with minimal config to test if dialog works at all
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile', 'openDirectory'],
+      title: 'Select a file to upload'
+    })
+    
+    console.log('📂 Dialog result:', {
+      cancelled: result.canceled,
+      filePathCount: result.filePaths.length,
+      filePaths: result.filePaths
+    })
+    
+    if (!result.canceled && result.filePaths.length > 0) {
+      const filePath = result.filePaths[0]
+      const fileName = path.basename(filePath)
+      console.log(`📁 File selected: ${fileName}`)
+      return { filePath, fileName, success: true }
+    }
+    
+    console.log('📁 File dialog cancelled')
+    return { success: false }
+    
+  } catch (err) {
+    console.error('📂 File dialog error:', err)
+    return { success: false, error: err.message }
   }
-  
-  console.log('📁 File dialog cancelled')
-  return { success: false }
 })
 
 ipcMain.handle('upload-video', async (event, { filePath, fileName }) => {
@@ -170,6 +175,11 @@ ipcMain.handle('get-videos', async () => {
 ipcMain.handle('open-external', async (event, url) => {
   shell.openExternal(url)
   return { success: true }
+})
+
+ipcMain.handle('test-ipc', async () => {
+  console.log('🧪 Test IPC handler called')
+  return { success: true, message: 'IPC communication working!' }
 })
 
 // ── Helper Functions ───────────────────────────────────────────────────────

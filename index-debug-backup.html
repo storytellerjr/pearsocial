@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ElectronAPI Test</title>
+  <style>
+    body { background: #1a1a1a; color: white; font-family: system-ui; padding: 2rem; }
+    .test-btn { background: #7EC845; color: black; padding: 1rem 2rem; margin: 1rem; cursor: pointer; border-radius: 8px; }
+    #output { background: #333; padding: 1rem; margin: 1rem 0; font-family: monospace; font-size: 0.9rem; }
+    .error { color: #ff6b6b; }
+    .success { color: #51cf66; }
+    .info { color: #74c0fc; }
+  </style>
+</head>
+<body>
+  <h1>🔍 ElectronAPI Debug Test</h1>
+  
+  <div id="output">Checking electronAPI...</div>
+  
+  <div class="test-btn" onclick="basicClickTest()">🔥 Basic Click Test</div>
+  <div class="test-btn" onclick="testElectronAPI()">Test ElectronAPI</div>
+  <div class="test-btn" onclick="testFileDialog()">Test File Dialog</div>
+  <div class="test-btn" id="addEventListener-test">🔧 addEventListener Test</div>
+
+  <script>
+    const output = document.getElementById('output')
+    
+    function log(msg, type = 'info') {
+      console.log(msg)
+      const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'
+      output.innerHTML += `<div class="${className}">${new Date().toLocaleTimeString()}: ${msg}</div>`
+      output.scrollTop = output.scrollHeight
+    }
+    
+    // Initial checks
+    log('🚀 Starting electronAPI tests...', 'info')
+    log('typeof window: ' + typeof window, 'info')
+    log('typeof globalThis: ' + typeof globalThis, 'info')
+    
+    // Check for electronAPI
+    const electronAPI = globalThis.electronAPI
+    log('globalThis.electronAPI: ' + typeof electronAPI, electronAPI ? 'success' : 'error')
+    
+    if (electronAPI) {
+      log('electronAPI keys: ' + Object.keys(electronAPI).join(', '), 'success')
+    } else {
+      log('electronAPI is not available!', 'error')
+      log('Available globals: ' + Object.keys(globalThis).filter(k => !k.startsWith('webkit')).slice(0, 10).join(', '), 'info')
+    }
+    
+    // Check for Pear object
+    const Pear = globalThis.Pear
+    log('globalThis.Pear: ' + typeof Pear, Pear ? 'success' : 'error')
+    
+    function testElectronAPI() {
+      log('🧪 Testing electronAPI...', 'info')
+      
+      if (!electronAPI) {
+        log('❌ electronAPI not available', 'error')
+        return
+      }
+      
+      log('✅ electronAPI is available', 'success')
+      
+      // Test each method
+      const methods = ['uploadVideo', 'showOpenDialog', 'getDriveKey', 'getVideos', 'onPearMessage', 'openExternal']
+      
+      methods.forEach(method => {
+        if (electronAPI[method]) {
+          log(`✅ ${method}: available (${typeof electronAPI[method]})`, 'success')
+        } else {
+          log(`❌ ${method}: missing`, 'error')
+        }
+      })
+    }
+    
+    async function testFileDialog() {
+      log('📂 Testing file dialog...', 'info')
+      
+      if (!electronAPI) {
+        log('❌ electronAPI not available', 'error')
+        return
+      }
+      
+      if (!electronAPI.showOpenDialog) {
+        log('❌ showOpenDialog method missing', 'error')
+        return
+      }
+      
+      try {
+        log('📂 Calling showOpenDialog...', 'info')
+        const result = await electronAPI.showOpenDialog()
+        log('✅ Dialog result: ' + JSON.stringify(result, null, 2), 'success')
+      } catch (err) {
+        log('❌ Dialog error: ' + err.message, 'error')
+        log('   Stack: ' + err.stack, 'error')
+      }
+    }
+    
+    log('✅ Test page loaded successfully', 'success')
+    
+    // Setup addEventListener test
+    document.addEventListener('DOMContentLoaded', () => {
+      const addEventBtn = document.getElementById('addEventListener-test')
+      if (addEventBtn) {
+        addEventBtn.addEventListener('click', () => {
+          log('🔧 addEventListener test clicked!', 'success')
+          alert('✅ addEventListener working!')
+        })
+        log('✅ addEventListener handler attached', 'success')
+      }
+    })
+  </script>
+</body>
+</html>

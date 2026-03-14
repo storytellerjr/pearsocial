@@ -35,7 +35,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // ── Environment info ───────────────────────────────────────────────────
   platform: process.platform,
-  isElectron: true
+  isElectron: true,
+  
+  // ── Test function ──────────────────────────────────────────────────────
+  testIPC: () => {
+    return ipcRenderer.invoke('test-ipc')
+  }
 })
 
 // ── Pear integration bridge ───────────────────────────────────────────────
@@ -50,6 +55,73 @@ contextBridge.exposeInMainWorld('Pear', {
       width: 1200
     }
   }
+})
+
+// ── Enhanced Event Handling Bridge ────────────────────────────────────────
+contextBridge.exposeInMainWorld('electronBridge', {
+  // Direct test functions for debugging
+  testFunction: () => {
+    console.log('✅ electronBridge.testFunction called!')
+    alert('✅ Click events working via bridge!')
+    return true
+  },
+  
+  // Debug info
+  getDebugInfo: () => {
+    return {
+      platform: process.platform,
+      nodeVersion: process.version,
+      electronVersion: process.versions.electron,
+      timestamp: new Date().toISOString()
+    }
+  }
+})
+
+// ── DOM Ready Event Setup ─────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  console.log('🔌 PearSocial preload script loaded - DOM ready')
+  
+  // Ensure electronAPI is available globally for any inline handlers
+  if (window.electronAPI) {
+    console.log('✅ electronAPI confirmed available in DOM context')
+  } else {
+    console.error('❌ electronAPI not available in DOM context!')
+  }
+  
+  // Test functions for debug mode
+  window.testElectronAPI = function() {
+    console.log('🧪 testElectronAPI called from window scope')
+    
+    if (!window.electronAPI) {
+      alert('❌ electronAPI not available')
+      return
+    }
+    
+    alert('✅ electronAPI available with methods: ' + Object.keys(window.electronAPI).join(', '))
+  }
+  
+  window.testFileDialog = async function() {
+    console.log('📂 testFileDialog called from window scope')
+    
+    if (!window.electronAPI || !window.electronAPI.showOpenDialog) {
+      alert('❌ showOpenDialog not available')
+      return
+    }
+    
+    try {
+      const result = await window.electronAPI.showOpenDialog()
+      alert('✅ File dialog result: ' + (result.success ? 'File selected!' : 'Cancelled'))
+    } catch (err) {
+      alert('❌ Error: ' + err.message)
+    }
+  }
+  
+  window.basicClickTest = function() {
+    alert('✅ Basic click test working!')
+  }
+  
+  // Enhanced logging for debugging
+  console.log('🔌 Event handlers and globals setup complete')
 })
 
 console.log('🔌 PearSocial preload script loaded')

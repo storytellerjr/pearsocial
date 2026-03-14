@@ -2,11 +2,199 @@
 > **Created by**: Storyteller
 
 
-## 🚨 Current Critical Issue (March 9, 2026)
+## 🚨 Current Critical Issue (March 14, 2026)
 
-### **Problem: Click Events Not Working in Electron Context**
+### **Problem: File Dialog Opens But Cannot Select Files on macOS 26.3.1**
 
-**Status**: ❌ **BLOCKING** - Upload functionality completely non-functional
+**Status**: ❌ **BLOCKING** - Upload functionality partially working but cannot select files
+
+**Previous Issue RESOLVED**: ✅ Click events now work after context bridge fixes
+
+**Date**: March 14, 2026  
+**Platform**: macOS 26.3.1 (Build: 25D2128)  
+**Electron**: v32.0.0  
+**Investigation Time**: ~2 hours
+=======
+
+### **Current Symptoms**:
+- ✅ **Click events working**: Upload zone responds to clicks
+- ✅ **JavaScript execution**: All scripts load and run correctly  
+- ✅ **IPC communication**: electronAPI calls reach main process
+- ✅ **File dialog opens**: Native macOS file picker appears
+- ❌ **File selection blocked**: Cannot select any files from dialog
+- ❌ **No file path returned**: Dialog returns empty/cancelled result
+
+### **Environment Details**:
+- **OS**: macOS 26.3.1 (Build: 25D2128)
+- **Electron**: v32.0.0
+- **Node.js**: v25.2.1
+- **Architecture**: Electron + Pear Runtime
+
+### **What Works**:
+✅ **Click event handlers**: Both onclick and addEventListener  
+✅ **electronAPI bridge**: Context bridge functioning correctly  
+✅ **File dialog display**: Native picker opens successfully  
+✅ **IPC communication**: Main ↔ Renderer process communication  
+✅ **Console logging**: All debug output visible  
+
+### **What Doesn't Work**:
+❌ **File selection**: Cannot pick files from dialog  
+❌ **File path access**: No file paths returned from picker  
+❌ **Upload workflow**: Cannot proceed past file selection  
+
+### **Debugging History**:
+
+**Test 1 - Context Bridge Fix** ✅:
+- Fixed context isolation preventing electronAPI access
+- Added proper function exposure in preload script
+- Result: Click events now work
+
+**Test 2 - Enhanced File Dialog**:
+- Added comprehensive error logging
+- Enhanced IPC handler with try/catch
+- Added detailed console output
+- Result: Dialog opens but file selection fails
+
+**Test 3 - Simplified Dialog Config**:
+- Removed file type filters
+- Simplified to basic openFile dialog
+- Added minimal configuration
+- Result: Same issue - dialog opens, no selection
+
+**Test 4 - macOS Security Permissions**:
+- Created entitlements.plist with file access permissions
+- Added macOS-specific build configuration
+- Added file system access entitlements
+- Result: No change
+
+**Test 5 - Electron Security Flags**:
+- Launched with --no-sandbox
+- Added --disable-web-security
+- Used --disable-features=VizDisplayCompositor
+- Result: No improvement
+
+### **Console Output Analysis**:
+
+**Main Process Logs**:
+```
+📂 Opening file dialog...
+📂 Dialog result: {
+  cancelled: true,
+  filePathCount: 0,
+  filePaths: []
+}
+📁 File dialog cancelled
+```
+
+**Renderer Process Logs**:
+```
+🔍 openFileDialog called
+📂 About to call electronAPI.showOpenDialog()
+📂 File dialog result: { success: false }
+📁 No file selected or dialog cancelled
+```
+
+**Pattern**: Dialog appears to user but immediately returns as "cancelled" even when files are clicked.
+
+### **Technical Investigation**:
+
+**Current File Dialog Implementation**:
+```javascript
+// Main Process (electron/main.cjs)
+const result = await dialog.showOpenDialog(mainWindow, {
+  properties: ['openFile', 'openDirectory'],
+  title: 'Select a file to upload'
+})
+```
+
+**Attempted Configurations Tested**:
+1. ✅ Basic openFile only
+2. ✅ With file type filters  
+3. ✅ With defaultPath set to home directory
+4. ✅ With multiple properties
+5. ✅ With specific titles
+6. ✅ Minimal configuration
+
+**macOS Security Entitlements Added**:
+```xml
+<key>com.apple.security.files.user-selected.read-write</key>
+<key>com.apple.security.files.downloads.read-write</key>
+<key>com.apple.security.network.client</key>
+<key>com.apple.security.network.server</key>
+```
+
+### **Hypotheses**:
+
+**Theory 1: macOS 26+ Security Policy** (Most Likely)
+- macOS 26.3.1 has new security restrictions  
+- Unsigned Electron apps blocked from file system access
+- Requires code signing or specific bypass method
+- System Integrity Protection (SIP) interference
+
+**Theory 2: Electron Version Compatibility**
+- Electron v32.0.0 may have compatibility issues with macOS 26+
+- Dialog API changes in newer macOS versions
+- Need Electron version upgrade/downgrade
+
+**Theory 3: Pear Runtime Interference**  
+- PearRuntime may be conflicting with native dialogs
+- P2P networking components affecting file access
+- Runtime permissions collision
+
+**Theory 4: Sandboxing Issues**
+- Even with --no-sandbox, macOS enforcing restrictions
+- App Transport Security blocking file operations
+- Need additional bypass flags
+
+### **Next Steps Required**:
+
+**Priority 1: macOS Security Bypass** 
+- [ ] Test with older macOS version (if available)
+- [ ] Try different Electron versions
+- [ ] Research macOS 26+ specific file access requirements
+- [ ] Test with properly code-signed build
+
+**Priority 2: Alternative File Selection**
+- [ ] Try drag & drop file handling instead of dialog
+- [ ] Implement web-based file input as fallback
+- [ ] Test with different dialog APIs
+
+**Priority 3: Environment Isolation**
+- [ ] Test pure Electron app without Pear Runtime
+- [ ] Create minimal reproduction case
+- [ ] Test on different macOS versions
+
+### **Attempted Solutions Summary**:
+
+| Solution | Status | Result |
+|----------|---------|--------|
+| Context bridge fix | ✅ Success | Click events working |
+| Enhanced error logging | ✅ Implemented | Better debugging info |
+| Simplified dialog config | ✅ Tested | No improvement |  
+| File type filter removal | ✅ Tested | No improvement |
+| macOS entitlements.plist | ✅ Added | No improvement |
+| Electron security flags | ✅ Tested | No improvement |
+| Alternative IPC patterns | ❌ Not tried | - |
+| Drag & drop fallback | ❌ Not tried | - |
+| Different Electron version | ❌ Not tried | - |
+
+### **Impact Assessment**:
+
+**Severity**: 🔥 **CRITICAL**  
+**User Impact**: **Cannot upload files - core functionality blocked**  
+**Development Impact**: **Cannot test P2P upload workflow**  
+**Platform Specific**: **macOS 26+ only - may work on other platforms**  
+
+### **Code Changes Made During Debugging**:
+
+**Files Modified**:
+- `electron/main.cjs` - Enhanced file dialog with logging
+- `electron/preload.js` - Fixed context bridge and added debug functions  
+- `index.html` - Restored full UI, added debug logging
+- `entitlements.plist` - Added macOS security permissions
+- `package.json` - Attempted build config changes
+
+**All changes preserved** for further investigation.
 
 ### **Symptoms**:
 - JavaScript loads and executes correctly 
@@ -199,8 +387,8 @@ element.addEventListener('click', handler)  // ❌ No response
 
 ---
 
-**Last Updated**: March 9, 2026  
-**Status**: 🚨 **CRITICAL ISSUE** - Click events non-functional
+**Last Updated**: March 14, 2026  
+**Status**: 🚨 **CRITICAL ISSUE** - File selection blocked on macOS 26+
 ---
 
 ## 📁 Index File Status & Context
